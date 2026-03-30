@@ -1,18 +1,16 @@
 # Zip It
 
-**A gentle nudge to breathe through your nose.**
+Zip It tells you when you're mouth breathing. It sits in your macOS menu bar, uses your webcam to track your lips, and plays a sound when your mouth has been open for a few seconds.
 
-Mouth breathing is linked to poor sleep, dry mouth, bad breath, and reduced focus. But most of us don't even notice when we're doing it — especially while staring at a screen.
-
-Zip It sits quietly in your macOS menu bar, watching your webcam in the background. When it notices your mouth has been open for a few seconds, it plays a subtle sound to remind you to close it. That's it.
+Most of the time there's no window — it just runs quietly and clicks at you when you slip up. Click the menu bar icon if you want to see what it's seeing.
 
 <p align="center">
-  <img src="screenshots/closed.jpg" width="280" alt="Zip It monitoring with mouth closed">
+  <img src="screenshots/closed.jpg" width="280" alt="Monitoring — mouth closed">
   &nbsp;&nbsp;
-  <img src="screenshots/alert.jpg" width="280" alt="Zip It alerting — mouth open">
+  <img src="screenshots/alert.jpg" width="280" alt="Alert — mouth open">
 </p>
 
-## Getting started
+## Install
 
 ```bash
 git clone https://github.com/asuth/zip-it.git
@@ -23,43 +21,33 @@ npm start
 
 Requires Node.js and macOS.
 
-On first launch, you'll calibrate the detector to your face — just close your mouth, click Go, then open it slightly, click Go. Takes about 10 seconds.
+## Usage
 
-After that, it runs in the background. Click the menu bar icon to see the live view. Right-click to quit.
+First launch asks you to calibrate — close your mouth, click Go, open your mouth, click Go. After that it runs in the background. Right-click the icon to quit. Click the gear to recalibrate.
 
 ## How it works
 
-Zip It uses [MediaPipe Face Landmarker](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) to track 478 facial landmarks in real time through your webcam. It measures mouth openness by comparing the **inner lip polygon area** to the **outer lip polygon area** — a ratio that stays stable regardless of head angle, distance from the camera, or lighting.
+[MediaPipe Face Landmarker](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) tracks 478 facial landmarks through your webcam. Zip It computes the ratio of inner lip area to outer lip area (using the [shoelace formula](https://en.wikipedia.org/wiki/Shoelace_formula)) — this stays stable across head angles and distances because both polygons deform the same way. When the ratio exceeds your calibrated threshold for 3 seconds, it plays a triple-click sound synthesized with the Web Audio API.
 
-When the ratio exceeds your calibrated threshold for 3 consecutive seconds, it plays a synthesized triple-click sound (generated with the Web Audio API — no audio files needed).
+Detection runs at 4Hz in the background, full framerate when the window is open.
 
-The live view shows:
-- Lip tracking overlay (green = closed, orange = open, red = alerting)
-- Openness ratio and duration
-- Progress bar toward the alert threshold
-- Dynamic face zoom that smoothly follows your head
+## Privacy
 
-Detection continues at 4Hz even when the window is hidden, so you'll always get the alert.
+Everything runs locally. The webcam feed is processed in-process by bundled WASM — no network requests are made, ever. You can verify this: the app is ~500 lines across 3 files, and a Content Security Policy blocks all outbound connections.
 
-## Privacy and security
-
-**Your camera feed never leaves your computer.** This was a core design goal, not an afterthought.
-
-- All ML inference runs locally via bundled WASM — no network requests, no cloud APIs
-- A strict [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) blocks all outbound connections (`connect-src 'self'`)
-- Electron is configured with `sandbox: true`, `contextIsolation: true`, and `nodeIntegration: false`
-- Navigation and popup windows are blocked at the process level
-- Only 2 IPC channels exist, both one-way, both only toggle UI state (tray icon and window visibility)
-- No analytics, no telemetry, no data persistence beyond your calibration threshold (stored in local storage)
-
-You can verify this yourself — the entire app is ~500 lines across 3 files (`main.js`, `preload.js`, `index.html`).
+Full details:
+- All MediaPipe assets (WASM runtime + model) are bundled in `vendor/`
+- CSP: `connect-src 'self'` — no outbound fetch/XHR/WebSocket possible
+- Electron sandbox enabled, context isolation on, node integration off
+- Navigation and popup windows blocked at the process level
+- No analytics, no telemetry, no accounts
 
 ## Built with
 
-- [Electron](https://www.electronjs.org/) — native macOS menu bar app
-- [MediaPipe Face Landmarker](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) — real-time face mesh (bundled offline)
-- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) — synthesized alert sounds
+- [Electron](https://www.electronjs.org/)
+- [MediaPipe Face Landmarker](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) (Apache 2.0)
+- Web Audio API
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
