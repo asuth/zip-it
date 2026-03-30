@@ -30,6 +30,12 @@ function createWindow() {
   win.loadFile('index.html');
   win.webContents.setBackgroundThrottling(false);
 
+  // Block all navigation away from the app
+  win.webContents.on('will-navigate', (e) => e.preventDefault());
+
+  // Block new window creation
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   // Hide instead of close
   win.on('close', (e) => {
     e.preventDefault();
