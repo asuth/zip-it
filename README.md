@@ -1,8 +1,12 @@
 # Zip It
 
-Zip It tells you when you're mouth breathing. It sits in your macOS menu bar, uses your webcam to track your lips, and plays a sound when your mouth has been open for a few seconds.
+Zip It tells you when you're mouth breathing.
 
-Most of the time there's no window — it just runs quietly and clicks at you when you slip up. Click the menu bar icon if you want to see what it's seeing.
+Chronic mouth breathing messes you up more than you'd think — it dries out your mouth, wrecks your sleep quality, contributes to brain fog during the day, and over time can actually change your facial structure. The problem is you don't notice you're doing it, especially when you're focused on a screen.
+
+Zip It sits in your macOS menu bar and watches your lips through your webcam. When your mouth has been open for a few seconds, it clicks at you. You close your mouth, it shuts up. That's the whole thing.
+
+Most of the time there's no window. It just monitors in the background. Click the menu bar icon if you want to see what it's seeing.
 
 <p align="center">
   <img src="screenshots/closed.jpg" width="280" alt="Monitoring — mouth closed">
@@ -31,16 +35,23 @@ First launch asks you to calibrate — close your mouth, click Go, open your mou
 
 Detection runs at 4Hz in the background, full framerate when the window is open.
 
-## Privacy
+## Privacy and security
 
-Everything runs locally. The webcam feed is processed in-process by bundled WASM — no network requests are made, ever. You can verify this: the app is ~500 lines across 3 files, and a Content Security Policy blocks all outbound connections.
+An app that points a camera at your face all day should earn your trust, so here's exactly what Zip It does and doesn't do.
 
-Full details:
-- All MediaPipe assets (WASM runtime + model) are bundled in `vendor/`
-- CSP: `connect-src 'self'` — no outbound fetch/XHR/WebSocket possible
-- Electron sandbox enabled, context isolation on, node integration off
-- Navigation and popup windows blocked at the process level
-- No analytics, no telemetry, no accounts
+**Your webcam feed never touches a network.** All face detection runs locally through MediaPipe WASM binaries bundled in the app. There are no API calls, no cloud services, no servers involved at any point. The app ships with everything it needs in the `vendor/` directory and makes zero network requests at runtime.
+
+**The app enforces this at multiple layers:**
+
+- **Content Security Policy** locks down what the app can do at the browser level. `connect-src 'self'` means fetch, XHR, and WebSocket can only reach local files. Even if someone injected code into the renderer, it couldn't phone home.
+- **Electron sandbox** (`sandbox: true`) runs the renderer in a restricted OS-level process that can't touch the filesystem or spawn other processes.
+- **Context isolation** (`contextIsolation: true`) and disabled Node integration (`nodeIntegration: false`) mean the renderer has no access to Node.js APIs — it can't read files, run commands, or access anything outside the browser sandbox.
+- **Locked-down IPC** — only 2 message channels exist between the renderer and main process, both one-way, both only toggle UI state (swap the tray icon, show/hide the window). There's no channel that could exfiltrate data even in theory.
+- **No navigation, no popups** — the app blocks all attempts to navigate to a different page or open new windows.
+
+**No analytics, no telemetry, no accounts, no data persistence** beyond your calibration threshold stored in local storage.
+
+The entire app is ~500 lines across 3 files (`main.js`, `preload.js`, `index.html`). You can read the whole thing in a few minutes.
 
 ## Built with
 
