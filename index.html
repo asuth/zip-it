@@ -171,7 +171,7 @@ const CAL_RING_CIRCUMF = 141.37; // 2π * 22.5
 const CAL_STORAGE_KEY = 'zipIt_calibration';
 
 // --- Calibration state ---
-let openThreshold = 0.15; // fallback default (inner lip area / outer lip area)
+let openThreshold = 0.3; // fallback default (inner lip gap / outer lip height)
 let calibrating = false;
 let calStep = null;  // 'closed' | 'open' | null
 let calStart = 0;
@@ -283,10 +283,6 @@ function finishCalibration() {
     calOverlay.classList.remove('active');
   };
 
-  // Auto-dismiss after 2s
-  setTimeout(() => {
-    calOverlay.classList.remove('active');
-  }, 2000);
 }
 
 // --- Audio ---
@@ -344,23 +340,24 @@ const INNER_LIP = [78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,
 
 function dist2d(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
-function polyArea(lm, indices) {
-  let area = 0;
-  for (let i = 0; i < indices.length; i++) {
-    const a = lm[indices[i]];
-    const b = lm[indices[(i + 1) % indices.length]];
-    area += a.x * b.y - b.x * a.y;
-  }
-  return Math.abs(area) / 2;
-}
-
 function mouthOpenness(lm) {
-  // Ratio of inner lip area to outer lip area.
-  // Both deform identically with head tilt → ratio is pose-invariant.
-  // When mouth is closed, inner area ≈ 0. When open, inner area grows.
-  const inner = polyArea(lm, INNER_LIP);
-  const outer = polyArea(lm, OUTER_LIP);
-  return outer > 0 ? inner / outer : 0;
+  // Average vertical gap between 3 inner lip center pairs.
+  // Measures actual lip separation, not area — immune to smiling.
+  const d1 = Math.abs(lm[82].y - lm[87].y);   // right of center
+  const d2 = Math.abs(lm[13].y - lm[14].y);   // center
+  const d3 = Math.abs(lm[312].y - lm[317].y); // left of center
+  const avgGap = (d1 + d2 + d3) / 3;
+
+  // Normalize by outer lip vertical extent (top to bottom of lip).
+  // Both scale identically with head tilt → pose-invariant.
+  // When smiling: gap stays ~0, lip height shrinks → ratio stays low.
+  let minY = 1, maxY = 0;
+  for (const idx of OUTER_LIP) {
+    if (lm[idx].y < minY) minY = lm[idx].y;
+    if (lm[idx].y > maxY) maxY = lm[idx].y;
+  }
+  const outerHeight = maxY - minY;
+  return outerHeight > 0 ? avgGap / outerHeight : 0;
 }
 
 // --- Zoom ---
