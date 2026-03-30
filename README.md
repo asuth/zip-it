@@ -1,22 +1,18 @@
 # Zip It
 
-A macOS menu bar app that watches your webcam and alerts you when you're mouth breathing.
+**A gentle nudge to breathe through your nose.**
 
-Uses MediaPipe Face Mesh to detect mouth openness in real time. Runs fully offline — no data ever leaves your machine.
+Mouth breathing is linked to poor sleep, dry mouth, bad breath, and reduced focus. But most of us don't even notice when we're doing it — especially while staring at a screen.
 
-![Alert](screenshots/alert.jpg)
-![Closed](screenshots/closed.jpg)
+Zip It sits quietly in your macOS menu bar, watching your webcam in the background. When it notices your mouth has been open for a few seconds, it plays a subtle sound to remind you to close it. That's it.
 
-## Features
+<p align="center">
+  <img src="screenshots/closed.jpg" width="280" alt="Zip It monitoring with mouth closed">
+  &nbsp;&nbsp;
+  <img src="screenshots/alert.jpg" width="280" alt="Zip It alerting — mouth open">
+</p>
 
-- **Menu bar app** — lives in your menu bar, click to see the live view
-- **Calibration** — personalized open/closed mouth detection tuned to your face
-- **Smart detection** — inner lip area tracking, resistant to head tilt
-- **Sound alert** — triple-click sound when your mouth has been open too long
-- **Privacy first** — all processing is local. No network connections, no data collection, no servers
-- **Low power** — detection throttles when the window is hidden
-
-## Install
+## Getting started
 
 ```bash
 git clone https://github.com/asuth/zip-it.git
@@ -25,30 +21,44 @@ npm install
 npm start
 ```
 
-Requires Node.js and macOS (uses macOS-specific menu bar APIs).
+Requires Node.js and macOS.
 
-## Usage
+On first launch, you'll calibrate the detector to your face — just close your mouth, click Go, then open it slightly, click Go. Takes about 10 seconds.
 
-1. Click the mouth icon in your menu bar to open the live view
-2. On first launch, calibrate: close your mouth, click Go, then open your mouth, click Go
-3. The app monitors in the background — you'll hear a triple-click when your mouth has been open for 3+ seconds
-4. Right-click the menu bar icon to quit
-5. Click the gear icon to recalibrate anytime
+After that, it runs in the background. Click the menu bar icon to see the live view. Right-click to quit.
 
+## How it works
 
-## Security
+Zip It uses [MediaPipe Face Landmarker](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) to track 478 facial landmarks in real time through your webcam. It measures mouth openness by comparing the **inner lip polygon area** to the **outer lip polygon area** — a ratio that stays stable regardless of head angle, distance from the camera, or lighting.
 
-- Webcam feed is processed locally and never transmitted
-- Content Security Policy blocks all external network connections
-- Electron sandbox enabled with context isolation
-- No navigation or popup windows allowed
-- Only 2 IPC channels, both one-way UI controls
+When the ratio exceeds your calibrated threshold for 3 consecutive seconds, it plays a synthesized triple-click sound (generated with the Web Audio API — no audio files needed).
+
+The live view shows:
+- Lip tracking overlay (green = closed, orange = open, red = alerting)
+- Openness ratio and duration
+- Progress bar toward the alert threshold
+- Dynamic face zoom that smoothly follows your head
+
+Detection continues at 4Hz even when the window is hidden, so you'll always get the alert.
+
+## Privacy and security
+
+**Your camera feed never leaves your computer.** This was a core design goal, not an afterthought.
+
+- All ML inference runs locally via bundled WASM — no network requests, no cloud APIs
+- A strict [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) blocks all outbound connections (`connect-src 'self'`)
+- Electron is configured with `sandbox: true`, `contextIsolation: true`, and `nodeIntegration: false`
+- Navigation and popup windows are blocked at the process level
+- Only 2 IPC channels exist, both one-way, both only toggle UI state (tray icon and window visibility)
+- No analytics, no telemetry, no data persistence beyond your calibration threshold (stored in local storage)
+
+You can verify this yourself — the entire app is ~500 lines across 3 files (`main.js`, `preload.js`, `index.html`).
 
 ## Built with
 
-- [Electron](https://www.electronjs.org/)
-- [MediaPipe Face Landmarker](https://developers.google.com/mediapipe/solutions/vision/face_landmarker)
-- Web Audio API for sound synthesis
+- [Electron](https://www.electronjs.org/) — native macOS menu bar app
+- [MediaPipe Face Landmarker](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) — real-time face mesh (bundled offline)
+- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) — synthesized alert sounds
 
 ## License
 
