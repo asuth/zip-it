@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, systemPreferences, screen, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, systemPreferences, screen, ipcMain, nativeImage } = require('electron');
 const path = require('path');
 
 app.setName('Zip It');
@@ -84,6 +84,12 @@ app.whenReady().then(async () => {
   tray = new Tray(normalIcon);
   tray.setToolTip('Zip It');
   tray.on('click', () => toggleWindow());
+  tray.on('right-click', () => {
+    const menu = Menu.buildFromTemplate([
+      { label: 'Quit Zip It', click: () => { win.destroy(); app.quit(); } },
+    ]);
+    tray.popUpContextMenu(menu);
+  });
 
   let alertShowing = false;
   ipcMain.on('alert', (_e, isAlert) => {
