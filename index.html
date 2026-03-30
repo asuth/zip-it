@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zip It</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #1a1a2e;
+    border-radius: 10px;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #e0e0e0;
+    position: relative;
+    -webkit-app-region: no-drag;
+  }
+  #container {
+    position: relative;
+    width: 100%; height: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  video { display: none; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #hud {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 6px 10px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.65));
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; pointer-events: none;
+    border-radius: 0 0 10px 10px;
+  }
+  #statusDot { width: 7px; height: 7px; border-radius: 50%; background: #81c784; flex-shrink: 0; }
+  #hudText {
+    opacity: 0.9; white-space: nowrap;
+    font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: 0.02em;
+  }
+  .fixed-field { display: inline-block; text-align: right; }
+  .f-ratio { width: 48px; }
+  .f-time { width: 34px; }
+  .f-status { width: 42px; display: inline-block; text-align: left; }
+  #progressBar {
+    flex: 1; height: 3px; background: rgba(255,255,255,0.15);
+    border-radius: 2px; overflow: hidden; min-width: 20px;
+  }
+  #progressFill { height: 100%; width: 0%; background: #81c784; transition: width 0.15s, background 0.3s; }
+
+  #alert-overlay {
+    display: none; position: absolute; top: 0; left: 0; right: 0;
+    background: rgba(229,57,53,0.85); color: white; padding: 3px;
+    font-weight: 700; font-size: 11px; text-align: center; z-index: 10;
+    border-radius: 10px 10px 0 0; animation: pulse 0.8s infinite alternate;
+  }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.7; } }
+
+  #setup-msg {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #888; font-size: 12px; text-align: center;
+  }
+
+  /* Calibration overlay */
+  #cal-overlay {
+    display: none;
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 20;
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px; text-align: center;
+    border-radius: 10px;
+  }
+  #cal-overlay.active { display: flex; }
+  #cal-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  #cal-instruction { font-size: 11px; color: #aaa; margin-bottom: 10px; line-height: 1.4; }
+  #cal-progress-ring {
+    width: 50px; height: 50px; margin-bottom: 8px;
+  }
+  #cal-progress-ring circle {
+    fill: none; stroke-width: 4; stroke-linecap: round;
+    transform-origin: center; transform: rotate(-90deg);
+  }
+  #cal-ring-bg { stroke: rgba(255,255,255,0.1); }
+  #cal-ring-fg { stroke: #64b5f6; stroke-dasharray: 141; stroke-dashoffset: 141; transition: stroke-dashoffset 0.1s; }
+  #cal-status { font-size: 10px; color: #666; font-variant-numeric: tabular-nums; }
+  #cal-btn {
+    -webkit-app-region: no-drag;
+    cursor: pointer; pointer-events: auto;
+    background: #2a3a5c; border: 1px solid #3a5a8c; color: #ccc;
+    padding: 4px 12px; border-radius: 6px; font-size: 10px;
+    margin-top: 6px;
+  }
+  #cal-btn:hover { background: #3a5a8c; }
+
+  /* Recalibrate button — top right corner */
+  #recal-btn {
+    -webkit-app-region: no-drag;
+    cursor: pointer; pointer-events: auto;
+    position: absolute; top: 6px; right: 6px; z-index: 5;
+    background: none; border: none; outline: none;
+    padding: 2px; border-radius: 4px;
+    opacity: 0.4; transition: opacity 0.15s;
+    line-height: 0;
+  }
+  #recal-btn:hover { opacity: 0.8; }
+  #recal-btn:focus { outline: none; }
+  #recal-btn svg { display: block; }
+</style>
+</head>
+<body>
+<div id="container">
+  <video id="video" playsinline></video>
+  <canvas id="overlay"></canvas>
+  <div id="alert-overlay">Zip it!</div>
+
+  <!-- Calibration overlay -->
+  <div id="cal-overlay">
+    <div id="cal-title">Calibrate</div>
+    <div id="cal-instruction">--</div>
+    <svg id="cal-progress-ring" viewBox="0 0 50 50">
+      <circle id="cal-ring-bg" cx="25" cy="25" r="22.5"/>
+      <circle id="cal-ring-fg" cx="25" cy="25" r="22.5"/>
+    </svg>
+    <div id="cal-status"></div>
+    <button id="cal-btn" style="display:none">Recalibrate</button>
+  </div>
+
+  <div id="hud">
+    <div id="statusDot"></div>
+    <span id="hudText">
+      <span class="fixed-field f-status" id="hStatus">--</span>
+      <span class="fixed-field f-ratio" id="hRatio">--</span>
+      <span class="fixed-field f-time" id="hTime">0.0s</span>
+    </span>
+    <div id="progressBar"><div id="progressFill"></div></div>
+  </div>
+  <button id="recal-btn" title="Recalibrate"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+</div>
+<p id="setup-msg">Loading model...</p>
+
+<script type="module">
+const vision = await import('./vendor/vision_bundle.mjs');
+const { FaceLandmarker, FilesetResolver } = vision;
+
+const video = document.getElementById('video');
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d');
+const statusDot = document.getElementById('statusDot');
+const hStatus = document.getElementById('hStatus');
+const hRatio = document.getElementById('hRatio');
+const hTime = document.getElementById('hTime');
+const progressFill = document.getElementById('progressFill');
+const alertOverlay = document.getElementById('alert-overlay');
+const setupMsg = document.getElementById('setup-msg');
+const calOverlay = document.getElementById('cal-overlay');
+const calTitle = document.getElementById('cal-title');
+const calInstruction = document.getElementById('cal-instruction');
+const calRingFg = document.getElementById('cal-ring-fg');
+const calStatus = document.getElementById('cal-status');
+const calBtn = document.getElementById('cal-btn');
+const recalBtn = document.getElementById('recal-btn');
+
+const ALERT_AFTER_SECS = 3.0;
+const ALERT_REPEAT_INTERVAL = 5;
+const CAL_DURATION = 5000;       // 5 seconds per step
+const CAL_RING_CIRCUMF = 141.37; // 2π * 22.5
+const CAL_STORAGE_KEY = 'zipIt_calibration';
+
+// --- Calibration state ---
+let openThreshold = 0.15; // fallback default (inner lip area / outer lip area)
+let calibrating = false;
+let calStep = null;  // 'closed' | 'open' | null
+let calStart = 0;
+let calSamples = [];
+let calClosed = 0;
+let calOpen = 0;
+
+function loadCalibration() {
+  try {
+    const data = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY));
+    if (data && data.threshold > 0) {
+      openThreshold = data.threshold;
+      calClosed = data.closed;
+      calOpen = data.open;
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+function saveCalibration() {
+  localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify({
+    threshold: openThreshold,
+    closed: calClosed,
+    open: calOpen,
+    date: Date.now(),
+  }));
+}
+
+function startCalibration() {
+  calibrating = false;
+  calOverlay.classList.add('active');
+  calTitle.textContent = 'Close mouth';
+  calRingFg.style.strokeDashoffset = CAL_RING_CIRCUMF;
+  calRingFg.style.stroke = '#64b5f6';
+  calStatus.textContent = '';
+  calInstruction.textContent = '';
+  calBtn.textContent = 'Go';
+  calBtn.style.display = 'inline-block';
+  calBtn.onclick = () => {
+    calibrating = true;
+    calStep = 'closed';
+    calSamples = [];
+    calStart = performance.now();
+    calBtn.style.display = 'none';
+  };
+}
+
+function showOpenStep() {
+  calibrating = false;
+  calTitle.textContent = 'Open mouth';
+  calRingFg.style.strokeDashoffset = CAL_RING_CIRCUMF;
+  calRingFg.style.stroke = '#ffb74d';
+  calBtn.textContent = 'Go';
+  calBtn.style.display = 'inline-block';
+  calBtn.onclick = () => {
+    calibrating = true;
+    calStep = 'open';
+    calSamples = [];
+    calStart = performance.now();
+    calBtn.style.display = 'none';
+  };
+}
+
+function calTick(ratio) {
+  if (!calibrating) return;
+  const elapsed = performance.now() - calStart;
+  const progress = Math.min(elapsed / CAL_DURATION, 1);
+  calRingFg.style.strokeDashoffset = CAL_RING_CIRCUMF * (1 - progress);
+  calStatus.textContent = '';
+
+  // Discard first 500ms (settling time)
+  if (elapsed > 500) calSamples.push(ratio);
+
+  if (progress >= 1) {
+    if (calStep === 'closed') {
+      calSamples.sort((a, b) => a - b);
+      calClosed = calSamples[Math.floor(calSamples.length / 2)];
+      showOpenStep();
+    } else if (calStep === 'open') {
+      calSamples.sort((a, b) => a - b);
+      calOpen = calSamples[Math.floor(calSamples.length / 2)];
+      finishCalibration();
+    }
+  }
+}
+
+function finishCalibration() {
+  // Set threshold at 40% between closed and open (biased toward closed = more sensitive)
+  const range = calOpen - calClosed;
+  if (range > 0.005) {
+    openThreshold = calClosed + range * 0.4;
+  } else {
+    // Values too close — use a small offset from closed
+    openThreshold = calClosed + 0.01;
+  }
+
+  saveCalibration();
+  calibrating = false;
+  calStep = null;
+  calTitle.textContent = 'Calibrated';
+  calInstruction.textContent = `Closed ${calClosed.toFixed(3)} / Open ${calOpen.toFixed(3)}\nThreshold ${openThreshold.toFixed(3)}`;
+  calRingFg.style.strokeDashoffset = 0;
+  calRingFg.style.stroke = '#81c784';
+  calStatus.textContent = '';
+  calBtn.textContent = 'OK';
+  calBtn.style.display = 'inline-block';
+  calBtn.onclick = () => {
+    calOverlay.classList.remove('active');
+  };
+
+  // Auto-dismiss after 2s
+  setTimeout(() => {
+    calOverlay.classList.remove('active');
+  }, 2000);
+}
+
+// --- Audio ---
+let audioCtx = null;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioContext(); }
+function noise(duration) {
+  const a = ensureAudio() || audioCtx;
+  const len = a.sampleRate * duration;
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return buf;
+}
+function beep() {
+  const a = audioCtx || (ensureAudio(), audioCtx);
+  if (a.state === 'suspended') a.resume();
+  const t = a.currentTime;
+  for (let i = 0; i < 3; i++) {
+    const ns = a.createBufferSource(); ns.buffer = noise(0.03);
+    const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2800; bp.Q.value = 4;
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.45, t + i * 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.1 + 0.025);
+    ns.connect(bp).connect(g).connect(a.destination);
+    ns.start(t + i * 0.1); ns.stop(t + i * 0.1 + 0.03);
+  }
+}
+
+// --- Face Landmarker ---
+const wasmFiles = await FilesetResolver.forVisionTasks('./vendor/wasm');
+const faceLandmarker = await FaceLandmarker.createFromOptions(wasmFiles, {
+  baseOptions: { modelAssetPath: './vendor/face_landmarker.task', delegate: 'GPU' },
+  runningMode: 'VIDEO',
+  numFaces: 1,
+  outputFaceBlendshapes: false,
+});
+
+setupMsg.textContent = 'Starting camera...';
+const stream = await navigator.mediaDevices.getUserMedia({
+  video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+});
+video.srcObject = stream;
+await video.play();
+
+function resizeCanvas() {
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
+}
+resizeCanvas();
+new ResizeObserver(resizeCanvas).observe(canvas);
+setupMsg.style.display = 'none';
+
+const OUTER_LIP = [61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
+const INNER_LIP = [78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,81,80,191];
+
+function dist2d(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+function polyArea(lm, indices) {
+  let area = 0;
+  for (let i = 0; i < indices.length; i++) {
+    const a = lm[indices[i]];
+    const b = lm[indices[(i + 1) % indices.length]];
+    area += a.x * b.y - b.x * a.y;
+  }
+  return Math.abs(area) / 2;
+}
+
+function mouthOpenness(lm) {
+  // Ratio of inner lip area to outer lip area.
+  // Both deform identically with head tilt → ratio is pose-invariant.
+  // When mouth is closed, inner area ≈ 0. When open, inner area grows.
+  const inner = polyArea(lm, INNER_LIP);
+  const outer = polyArea(lm, OUTER_LIP);
+  return outer > 0 ? inner / outer : 0;
+}
+
+// --- Zoom ---
+let zX = 0.5, zY = 0.5, zS = 1;
+const LERP = 0.015, DEAD = 0.03, TARGET_ZOOM = 1.8;
+
+function updateZoom(lm) {
+  let minX = 1, maxX = 0, minY = 1, maxY = 0;
+  for (const p of lm) {
+    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+  }
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  const sz = Math.max(maxX - minX, maxY - minY);
+  const tgtS = Math.min(TARGET_ZOOM, 0.55 / sz);
+  const dx = cx - zX, dy = cy - zY;
+  if (Math.abs(dx) > DEAD) zX += dx * LERP;
+  if (Math.abs(dy) > DEAD) zY += dy * LERP;
+  zS += (tgtS - zS) * LERP;
+}
+
+function resetZoom() {
+  zX += (0.5 - zX) * 0.005;
+  zY += (0.5 - zY) * 0.005;
+  zS += (1 - zS) * 0.005;
+}
+
+function drawFrame(lm, lipColor) {
+  const cw = canvas.width, ch = canvas.height;
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.save();
+  ctx.translate(cw, 0);
+  ctx.scale(-1, 1);
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const canvasAR = cw / ch, videoAR = vw / vh;
+  let baseW, baseH;
+  if (videoAR > canvasAR) { baseH = 1; baseW = canvasAR / videoAR; }
+  else { baseW = 1; baseH = videoAR / canvasAR; }
+  const viewW = baseW / zS, viewH = baseH / zS;
+  let sx = (zX - viewW / 2) * vw, sy = (zY - viewH / 2) * vh;
+  let sw = viewW * vw, sh = viewH * vh;
+  if (sx < 0) sx = 0; if (sy < 0) sy = 0;
+  if (sx + sw > vw) sx = vw - sw; if (sy + sh > vh) sy = vh - sh;
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
+  if (lm && lipColor) {
+    ctx.strokeStyle = lipColor;
+    ctx.lineWidth = 2 * devicePixelRatio;
+    for (const ring of [OUTER_LIP, INNER_LIP]) {
+      ctx.beginPath();
+      ring.forEach((idx, i) => {
+        const px = ((lm[idx].x * vw) - sx) / sw * cw;
+        const py = ((lm[idx].y * vh) - sy) / sh * ch;
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// --- Background-safe timer ---
+const timerWorker = new Worker(
+  URL.createObjectURL(new Blob([`
+    let id = null;
+    onmessage = e => { if (id) clearInterval(id); id = setInterval(() => postMessage(0), e.data); };
+  `], { type: 'application/javascript' }))
+);
+
+let mouthOpenSince = null, lastAlertTime = 0, alertActive = false, lastTs = -1;
+
+function detect() {
+  let now = performance.now();
+  if (now <= lastTs) now = lastTs + 1;
+  lastTs = now;
+
+  let result;
+  try { result = faceLandmarker.detectForVideo(video, now); } catch { return; }
+  const visible = document.visibilityState === 'visible';
+
+  if (result.faceLandmarks && result.faceLandmarks.length > 0) {
+    const lm = result.faceLandmarks[0];
+    const ratio = mouthOpenness(lm);
+
+    // Feed calibration if active
+    if (calibrating) {
+      calTick(ratio);
+      if (visible) drawFrame(lm, '#64b5f6');
+      updateZoom(lm);
+      hRatio.textContent = ratio.toFixed(4);
+      return;
+    }
+
+    const isOpen = ratio > openThreshold;
+
+    if (isOpen) { if (!mouthOpenSince) mouthOpenSince = now; }
+    else {
+      if (alertActive && window.zipIt) window.zipIt.alert(false);
+      mouthOpenSince = null; alertActive = false;
+    }
+
+    const openSecs = mouthOpenSince ? (now - mouthOpenSince) / 1000 : 0;
+    const progress = Math.min(openSecs / ALERT_AFTER_SECS, 1);
+
+    if (openSecs >= ALERT_AFTER_SECS) {
+      if (!alertActive || (now - lastAlertTime) / 1000 >= ALERT_REPEAT_INTERVAL) {
+        beep(); lastAlertTime = now; alertActive = true;
+        if (window.zipIt) window.zipIt.alert(true);
+      }
+      alertOverlay.style.display = 'block';
+      statusDot.style.background = '#e53935';
+      hStatus.textContent = 'ALERT';
+    } else {
+      alertOverlay.style.display = 'none';
+      statusDot.style.background = isOpen ? '#ffb74d' : '#81c784';
+      hStatus.textContent = isOpen ? 'Open' : 'Closed';
+    }
+    hRatio.textContent = ratio.toFixed(4);
+    hTime.textContent = openSecs.toFixed(1) + 's';
+
+    updateZoom(lm);
+    if (visible) {
+      const lipColor = alertActive ? '#e53935' : isOpen ? '#ffb74d' : '#81c784';
+      drawFrame(lm, lipColor);
+    }
+
+    progressFill.style.width = (progress * 100) + '%';
+    progressFill.style.background = progress < 0.5 ? '#81c784' : progress < 0.85 ? '#ffb74d' : '#e53935';
+  } else {
+    statusDot.style.background = '#888';
+    hStatus.textContent = '--';
+    hRatio.textContent = '--';
+    hTime.textContent = '0.0s';
+    progressFill.style.width = '0%';
+    mouthOpenSince = null;
+    resetZoom();
+    if (visible) drawFrame(null, null);
+  }
+}
+
+// --- Recalibrate button ---
+recalBtn.addEventListener('click', () => startCalibration());
+
+// --- Init: load calibration or start wizard ---
+const hasCalibration = loadCalibration();
+if (!hasCalibration) {
+  // Show window automatically for calibration
+  if (window.zipIt) window.zipIt.showWindow();
+  startCalibration();
+}
+
+// Allow forcing recalibration via IPC from main process or devtools
+window._recalibrate = () => {
+  localStorage.removeItem(CAL_STORAGE_KEY);
+  if (window.zipIt) window.zipIt.showWindow();
+  startCalibration();
+};
+
+timerWorker.postMessage(200);
+timerWorker.onmessage = () => detect();
+function rafLoop() { detect(); requestAnimationFrame(rafLoop); }
+requestAnimationFrame(rafLoop);
+</script>
+</body>
+</html>

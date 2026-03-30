@@ -1,0 +1,122 @@
+const { app, BrowserWindow, Tray, systemPreferences, screen, ipcMain, nativeImage } = require('electron');
+const path = require('path');
+
+app.setName('Zip It');
+
+let tray = null;
+let win = null;
+
+function createWindow() {
+  win = new BrowserWindow({
+    width: 220,
+    height: 220,
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    roundedCorners: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+
+  win.loadFile('index.html');
+  win.webContents.setBackgroundThrottling(false);
+
+  // Hide instead of close
+  win.on('close', (e) => {
+    e.preventDefault();
+    win.hide();
+  });
+
+  // Hide when clicking outside (only if not user-opened)
+  win.on('blur', () => {
+    if (!userOpened) win.hide();
+  });
+}
+
+let userOpened = false; // true when user clicked tray to open
+
+function toggleWindow() {
+  if (win.isVisible()) {
+    win.hide();
+    userOpened = false;
+    return;
+  }
+
+  const trayBounds = tray.getBounds();
+  const winBounds = win.getBounds();
+  const x = Math.round(trayBounds.x + trayBounds.width / 2 - winBounds.width / 2);
+  const y = Math.round(trayBounds.y + trayBounds.height + 4);
+  win.setPosition(x, y, false);
+  win.show();
+  userOpened = true;
+}
+
+app.whenReady().then(async () => {
+  // Request camera permission on macOS
+  if (process.platform === 'darwin') {
+    const status = systemPreferences.getMediaAccessStatus('camera');
+    if (status !== 'granted') {
+      await systemPreferences.askForMediaAccess('camera');
+    }
+  }
+
+  // Hide dock icon — menu bar app only
+  app.dock.hide();
+
+  const normalIcon = nativeImage.createFromPath(path.join(__dirname, 'mouthTemplate.png'));
+  const alertIcon = nativeImage.createFromPath(path.join(__dirname, 'mouthAlert.png'));
+
+  tray = new Tray(normalIcon);
+  tray.setToolTip('Zip It');
+  tray.on('click', () => toggleWindow());
+
+  let alertShowing = false;
+  ipcMain.on('alert', (_e, isAlert) => {
+    if (isAlert) {
+      tray.setImage(alertIcon);
+
+      // Show window below tray icon
+      if (!alertShowing) {
+        const trayBounds = tray.getBounds();
+        const winBounds = win.getBounds();
+        const x = Math.round(trayBounds.x + trayBounds.width / 2 - winBounds.width / 2);
+        const y = Math.round(trayBounds.y + trayBounds.height + 4);
+        win.setPosition(x, y, false);
+        win.showInactive();
+        alertShowing = true;
+      }
+    } else {
+      // Mouth closed — dismiss only if alert opened it, not the user
+      if (alertShowing) {
+        tray.setImage(normalIcon);
+        if (!userOpened) win.hide();
+        alertShowing = false;
+      }
+    }
+  });
+
+  ipcMain.on('show-window', () => {
+    if (!win.isVisible()) {
+      const trayBounds = tray.getBounds();
+      const winBounds = win.getBounds();
+      const x = Math.round(trayBounds.x + trayBounds.width / 2 - winBounds.width / 2);
+      const y = Math.round(trayBounds.y + trayBounds.height + 4);
+      win.setPosition(x, y, false);
+      win.showInactive();
+    }
+  });
+
+  createWindow();
+});
+
+app.on('window-all-closed', (e) => {
+  // Don't quit — menu bar app stays alive
+});

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <g fill="none" stroke="#e53935" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Upper lip -->
+    <path d="M 7,31 Q 20,17 36,24 Q 52,17 65,31" stroke-width="4.5"/>
+    <!-- Lower lip (dropped open) -->
+    <path d="M 7,31 Q 22,58 36,60 Q 50,58 65,31" stroke-width="4.5"/>
+    <!-- Open mouth interior -->
+    <ellipse cx="36" cy="42" rx="18" ry="12" fill="#e53935" fill-opacity="0.2" stroke="none"/>
+  </g>
+</svg>
