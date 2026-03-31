@@ -8,8 +8,8 @@ let win = null;
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 220,
-    height: 220,
+    width: 250,
+    height: 250,
     show: false,
     frame: false,
     transparent: true,
@@ -83,13 +83,11 @@ app.whenReady().then(async () => {
 
   tray = new Tray(normalIcon);
   tray.setToolTip('Zip It');
+  const quitMenu = Menu.buildFromTemplate([
+    { label: 'Quit Zip It', click: () => { win.destroy(); app.quit(); } },
+  ]);
   tray.on('click', () => toggleWindow());
-  tray.on('right-click', () => {
-    const menu = Menu.buildFromTemplate([
-      { label: 'Quit Zip It', click: () => { win.destroy(); app.quit(); } },
-    ]);
-    tray.popUpContextMenu(menu);
-  });
+  tray.on('right-click', () => tray.popUpContextMenu(quitMenu));
 
   let alertShowing = false;
   ipcMain.on('alert', (_e, isAlert) => {

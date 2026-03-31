@@ -30,26 +30,44 @@
   #hud {
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    padding: 6px 10px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.65));
-    display: flex; align-items: center; gap: 6px;
-    font-size: 11px; pointer-events: none;
+    height: 28px;
+    padding: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    font-size: 12px; pointer-events: none;
     border-radius: 0 0 10px 10px;
+    color: #ddd;
   }
-  #statusDot { width: 7px; height: 7px; border-radius: 50%; background: #81c784; flex-shrink: 0; }
-  #hudText {
-    opacity: 0.9; white-space: nowrap;
-    font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: 0.02em;
+  .hud-third {
+    height: 28px; display: flex; align-items: center; gap: 4px;
+    font-variant-numeric: tabular-nums;
+    padding: 0 6px;
+    overflow: hidden;
+    box-sizing: border-box;
   }
-  .fixed-field { display: inline-block; text-align: right; }
-  .f-ratio { width: 48px; }
-  .f-time { width: 34px; }
-  .f-status { width: 42px; display: inline-block; text-align: left; }
-  #progressBar {
-    flex: 1; height: 3px; background: rgba(255,255,255,0.15);
-    border-radius: 2px; overflow: hidden; min-width: 20px;
+  .hud-third + .hud-third { border-left: 1px solid rgba(255,255,255,0.15); }
+  .hud-emoji { font-size: 14px; line-height: 1; flex-shrink: 0; }
+  .hud-pct { width: 28px; text-align: right; font-size: 10px; flex-shrink: 0; }
+  .hud-bar {
+    flex: 1; height: 4px; background: rgba(255,255,255,0.15);
+    border-radius: 2px; overflow: hidden; min-width: 0;
   }
-  #progressFill { height: 100%; width: 0%; background: #81c784; transition: width 0.15s, background 0.3s; }
+  .hud-bar-fill { height: 100%; width: 0%; background: #81c784; transition: width 0.15s, background 0.3s; }
+  .hud-alert-text { display: none; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; white-space: nowrap; }
+  .hud-third.hud-alert {
+    background: rgba(229,57,53,0.85);
+    color: white;
+    font-weight: 700;
+    justify-content: center;
+    border-left: none !important;
+    animation: pulse 0.8s infinite alternate;
+  }
+  .hud-third.hud-alert .hud-bar,
+  .hud-third.hud-alert .hud-pct,
+  .hud-third.hud-alert .hud-emoji { display: none; }
+  .hud-third.hud-alert .hud-alert-text { display: inline; }
 
   #alert-overlay {
     display: none; position: absolute; top: 0; left: 0; right: 0;
@@ -58,6 +76,7 @@
     border-radius: 10px 10px 0 0; animation: pulse 0.8s infinite alternate;
   }
   @keyframes pulse { from { opacity: 1; } to { opacity: 0.7; } }
+
 
   #setup-msg {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -130,13 +149,24 @@
   </div>
 
   <div id="hud">
-    <div id="statusDot"></div>
-    <span id="hudText">
-      <span class="fixed-field f-status" id="hStatus">--</span>
-      <span class="fixed-field f-ratio" id="hRatio">--</span>
-      <span class="fixed-field f-time" id="hTime">0.0s</span>
-    </span>
-    <div id="progressBar"><div id="progressFill"></div></div>
+    <div class="hud-third" id="postureHalf">
+      <span class="hud-emoji" id="postureIcon">&#x1F9B4;</span>
+      <span class="hud-pct" id="posturePct">--%</span>
+      <div class="hud-bar"><div class="hud-bar-fill" id="postureBar"></div></div>
+      <span class="hud-alert-text">SIT UP</span>
+    </div>
+    <div class="hud-third" id="handHalf">
+      <span class="hud-emoji">&#x270B;</span>
+      <span class="hud-pct" id="handPct">--%</span>
+      <div class="hud-bar"><div class="hud-bar-fill" id="handBar"></div></div>
+      <span class="hud-alert-text">HANDS OFF</span>
+    </div>
+    <div class="hud-third" id="mouthHalf">
+      <span class="hud-emoji" id="mouthIcon">&#x1F444;</span>
+      <span class="hud-pct" id="mouthPct">--%</span>
+      <div class="hud-bar"><div class="hud-bar-fill" id="mouthBar"></div></div>
+      <span class="hud-alert-text">ZIP IT</span>
+    </div>
   </div>
   <button id="recal-btn" title="Recalibrate"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
 </div>
@@ -149,12 +179,11 @@ const { FaceLandmarker, FilesetResolver } = vision;
 const video = document.getElementById('video');
 const canvas = document.getElementById('overlay');
 const ctx = canvas.getContext('2d');
-const statusDot = document.getElementById('statusDot');
-const hStatus = document.getElementById('hStatus');
-const hRatio = document.getElementById('hRatio');
-const hTime = document.getElementById('hTime');
-const progressFill = document.getElementById('progressFill');
 const alertOverlay = document.getElementById('alert-overlay');
+const postureBar = document.getElementById('postureBar');
+const posturePct = document.getElementById('posturePct');
+const mouthBar = document.getElementById('mouthBar');
+const mouthPct = document.getElementById('mouthPct');
 const setupMsg = document.getElementById('setup-msg');
 const calOverlay = document.getElementById('cal-overlay');
 const calTitle = document.getElementById('cal-title');
@@ -171,7 +200,7 @@ const CAL_RING_CIRCUMF = 141.37; // 2π * 22.5
 const CAL_STORAGE_KEY = 'zipIt_calibration';
 
 // --- Calibration state ---
-let openThreshold = 0.3; // fallback default (inner lip gap / outer lip height)
+let openThreshold = 0.07; // default threshold (inner lip gap / outer lip height)
 let calibrating = false;
 let calStep = null;  // 'closed' | 'open' | null
 let calStart = 0;
@@ -311,6 +340,29 @@ function beep() {
   }
 }
 
+function postureDing() {
+  const a = audioCtx || (ensureAudio(), audioCtx);
+  if (a.state === 'suspended') a.resume();
+  const t = a.currentTime;
+  [330, 495, 660].forEach((f, i) => {
+    const osc = a.createOscillator(); osc.type = 'square'; osc.frequency.value = f;
+    const g = a.createGain(); g.gain.setValueAtTime(0.12, t + i * 0.07); g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.05);
+    osc.connect(g).connect(a.destination); osc.start(t + i * 0.07); osc.stop(t + i * 0.07 + 0.06);
+  });
+}
+
+function handTink() {
+  const a = audioCtx || (ensureAudio(), audioCtx);
+  if (a.state === 'suspended') a.resume();
+  const t = a.currentTime;
+  [2093, 4186].forEach((f, i) => {
+    const osc = a.createOscillator(); osc.type = 'sine'; osc.frequency.value = f;
+    const g = a.createGain(); g.gain.setValueAtTime(i === 0 ? 0.12 : 0.05, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc.connect(g).connect(a.destination); osc.start(t); osc.stop(t + 0.25);
+  });
+}
+
 // --- Face Landmarker ---
 const wasmFiles = await FilesetResolver.forVisionTasks('./vendor/wasm');
 const faceLandmarker = await FaceLandmarker.createFromOptions(wasmFiles, {
@@ -320,10 +372,99 @@ const faceLandmarker = await FaceLandmarker.createFromOptions(wasmFiles, {
   outputFaceBlendshapes: false,
 });
 
-setupMsg.textContent = 'Starting camera...';
-const stream = await navigator.mediaDevices.getUserMedia({
-  video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+const { HandLandmarker, PoseLandmarker } = vision;
+const handLandmarker = await HandLandmarker.createFromOptions(wasmFiles, {
+  baseOptions: { modelAssetPath: './vendor/hand_landmarker.task', delegate: 'GPU' },
+  runningMode: 'VIDEO',
+  numHands: 2,
 });
+const poseLandmarker = await PoseLandmarker.createFromOptions(wasmFiles, {
+  baseOptions: { modelAssetPath: './vendor/pose_landmarker_lite.task', delegate: 'GPU' },
+  runningMode: 'VIDEO',
+  numPoses: 1,
+});
+
+// --- Auto-select most forward-facing camera ---
+setupMsg.textContent = 'Finding best camera...';
+
+async function pickBestCamera() {
+  // First, request camera access to get labeled device list
+  const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+  tempStream.getTracks().forEach(t => t.stop());
+
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const cameras = devices.filter(d => d.kind === 'videoinput'
+    && !d.label.toLowerCase().includes('continuity')
+    && !d.label.toLowerCase().includes('iphone'));
+
+  if (cameras.length <= 1) {
+    // Only one camera (or none) — just use it directly
+    const s = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+    });
+    return s;
+  }
+
+  // Score each camera by how forward-facing the detected face is
+  let bestStream = null, bestScore = -1, bestId = null;
+
+  for (let ci = 0; ci < cameras.length; ci++) {
+    const cam = cameras[ci];
+    setupMsg.textContent = `Testing camera ${ci + 1} of ${cameras.length}...`;
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: cam.deviceId }, width: { ideal: 640 }, height: { ideal: 480 } }
+      });
+    } catch { continue; }
+
+    const probe = document.createElement('video');
+    probe.srcObject = stream;
+    probe.muted = true;
+    await probe.play();
+
+    // Try multiple times — some cameras need longer to produce usable frames
+    let score = -1;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await new Promise(r => setTimeout(r, 300));
+      try {
+        const result = faceLandmarker.detectForVideo(probe, performance.now());
+        if (result.faceLandmarks && result.faceLandmarks.length > 0) {
+          const lm = result.faceLandmarks[0];
+          const nose = lm[1];
+          const dRight = Math.hypot(nose.x - lm[234].x, nose.y - lm[234].y);
+          const dLeft  = Math.hypot(nose.x - lm[454].x, nose.y - lm[454].y);
+          const symmetry = 1 - Math.abs(dRight - dLeft) / (dRight + dLeft);
+          const faceWidth = Math.abs(lm[234].x - lm[454].x);
+          score = symmetry * faceWidth;
+          break;
+        }
+      } catch {}
+    }
+
+    if (score > bestScore) {
+      // Release previous best stream
+      if (bestStream) bestStream.getTracks().forEach(t => t.stop());
+      bestScore = score;
+      bestStream = stream;
+      bestId = cam.deviceId;
+    } else {
+      stream.getTracks().forEach(t => t.stop());
+    }
+
+    probe.pause();
+    probe.srcObject = null;
+  }
+
+  if (!bestStream) {
+    bestStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+    });
+  }
+  return bestStream;
+}
+
+const stream = await pickBestCamera();
 video.srcObject = stream;
 await video.play();
 
@@ -358,6 +499,148 @@ function mouthOpenness(lm) {
   }
   const outerHeight = maxY - minY;
   return outerHeight > 0 ? avgGap / outerHeight : 0;
+}
+
+// --- Posture estimation ---
+// Uses MediaPipe Pose Landmarker to measure head position relative to shoulders.
+// Slouching = nose drops closer to shoulder line.
+const postureIcon = document.getElementById('postureIcon');
+const mouthIcon = document.getElementById('mouthIcon');
+const postureHalf = document.getElementById('postureHalf');
+const mouthHalf = document.getElementById('mouthHalf');
+const postureAlertText = postureHalf.querySelector('.hud-alert-text');
+
+const POSTURE_ALERT_SECS = 4;
+const POSTURE_REPEAT_SECS = 8;
+// Absolute thresholds for nose-to-shoulder ratio (normalized by shoulder width)
+const POSTURE_RATIO_WARN = 0.45;  // below this = slouching warning
+const POSTURE_RATIO_BAD = 0.37;   // below this = slouching alert
+
+let postureBadSince = null;
+let lastPostureDing = 0;
+
+function getPostureRatio(now) {
+  // Run pose detection
+  let poseResult;
+  try { poseResult = poseLandmarker.detectForVideo(video, now); } catch { return null; }
+  if (!poseResult.landmarks || poseResult.landmarks.length === 0) return null;
+
+  const pose = poseResult.landmarks[0];
+  const nose = pose[0];
+  const lShoulder = pose[11];
+  const rShoulder = pose[12];
+
+  // Vertical distance from nose to shoulder midpoint (normalized)
+  // Larger = more upright, smaller = slouching
+  const shoulderMidY = (lShoulder.y + rShoulder.y) / 2;
+  const noseToShoulders = shoulderMidY - nose.y;
+
+  // Normalize by shoulder width for distance invariance
+  const shoulderWidth = Math.abs(lShoulder.x - rShoulder.x);
+  if (shoulderWidth < 0.01) return null;
+
+  return noseToShoulders / shoulderWidth;
+}
+
+const handHalf = document.getElementById('handHalf');
+const handBar = document.getElementById('handBar');
+const handPct = document.getElementById('handPct');
+
+const HAND_ALERT_SECS = 1;
+const HAND_REPEAT_SECS = 8;
+let handOnFace = false;
+let handBadSince = null;
+let lastHandDing = 0;
+
+function checkHandOnFace(faceLm, now) {
+  // Run hand detection
+  let handResult;
+  try { handResult = handLandmarker.detectForVideo(video, now); } catch { return false; }
+  if (!handResult.landmarks || handResult.landmarks.length === 0) return false;
+
+  // Get face bounding box
+  let fMinX = 1, fMaxX = 0, fMinY = 1, fMaxY = 0;
+  for (const p of faceLm) {
+    if (p.x < fMinX) fMinX = p.x; if (p.x > fMaxX) fMaxX = p.x;
+    if (p.y < fMinY) fMinY = p.y; if (p.y > fMaxY) fMaxY = p.y;
+  }
+  // Expand face box slightly
+  const pad = 0.03;
+  fMinX -= pad; fMaxX += pad; fMinY -= pad; fMaxY += pad;
+
+  // Check if any hand landmark overlaps the face region
+  for (const hand of handResult.landmarks) {
+    for (const pt of hand) {
+      if (pt.x >= fMinX && pt.x <= fMaxX && pt.y >= fMinY && pt.y <= fMaxY) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function updateHand(lm, now) {
+  handOnFace = checkHandOnFace(lm, now);
+  handPct.textContent = handOnFace ? '0%' : '100%';
+
+  if (handOnFace) {
+    if (!handBadSince) handBadSince = now;
+    const badSecs = (now - handBadSince) / 1000;
+    const progress = Math.min(badSecs / HAND_ALERT_SECS, 1);
+    handBar.style.width = (progress * 100) + '%';
+    handBar.style.background = badSecs >= HAND_ALERT_SECS ? '#e53935' : '#ffb74d';
+    if (badSecs >= HAND_ALERT_SECS) {
+      handHalf.classList.add('hud-alert');
+      if ((now - lastHandDing) / 1000 >= HAND_REPEAT_SECS) {
+        handTink();
+        lastHandDing = now;
+        if (window.zipIt) window.zipIt.alert(true);
+      }
+    } else {
+      handHalf.classList.remove('hud-alert');
+    }
+  } else {
+    handBadSince = null;
+    handHalf.classList.remove('hud-alert');
+    handBar.style.width = '0%';
+    handBar.style.background = '#81c784';
+  }
+}
+
+function updatePosture(lm, now) {
+  const ratio = getPostureRatio(now);
+  if (ratio === null) return;
+
+  // Map ratio to percentage: BAD=0%, upright(0.60)=100%
+  const pct = Math.max(0, Math.min(100, Math.round(((ratio - POSTURE_RATIO_BAD) / (0.60 - POSTURE_RATIO_BAD)) * 100)));
+  posturePct.textContent = pct + '%';
+
+  const isBad = ratio < POSTURE_RATIO_BAD;
+  const isWarn = ratio < POSTURE_RATIO_WARN;
+
+  if (isWarn) {
+    if (!postureBadSince) postureBadSince = now;
+    const badSecs = (now - postureBadSince) / 1000;
+    const progress = Math.min(badSecs / POSTURE_ALERT_SECS, 1);
+    postureBar.style.width = (progress * 100) + '%';
+    postureBar.style.background = isBad ? '#e53935' : '#ffb74d';
+    if (isBad && badSecs >= POSTURE_ALERT_SECS) {
+      postureHalf.classList.add('hud-alert');
+      postureAlertText.textContent = 'SIT UP';
+      if ((now - lastPostureDing) / 1000 >= POSTURE_REPEAT_SECS) {
+        postureDing();
+        lastPostureDing = now;
+        if (window.zipIt) window.zipIt.alert(true);
+      }
+    } else {
+      postureHalf.classList.remove('hud-alert');
+    }
+  } else {
+    postureBadSince = null;
+    postureHalf.classList.remove('hud-alert');
+    postureBar.style.width = '0%';
+    postureBar.style.background = '#81c784';
+  }
 }
 
 // --- Zoom ---
@@ -447,52 +730,62 @@ function detect() {
       calTick(ratio);
       if (visible) drawFrame(lm, '#64b5f6');
       updateZoom(lm);
-      hRatio.textContent = ratio.toFixed(4);
       return;
     }
 
+    updatePosture(lm, now);
+    updateHand(lm, now);
     const isOpen = ratio > openThreshold;
+
+    // Mouth percentage: 100% = closed (good), 0% = wide open (bad)
+    const mouthPctVal = Math.max(0, Math.min(100, 100 - Math.round((ratio / (openThreshold * 3)) * 100)));
+    mouthPct.textContent = mouthPctVal + '%';
 
     if (isOpen) { if (!mouthOpenSince) mouthOpenSince = now; }
     else {
       if (alertActive && window.zipIt) window.zipIt.alert(false);
       mouthOpenSince = null; alertActive = false;
+      mouthHalf.classList.remove('hud-alert');
     }
 
     const openSecs = mouthOpenSince ? (now - mouthOpenSince) / 1000 : 0;
-    const progress = Math.min(openSecs / ALERT_AFTER_SECS, 1);
+    const mouthProgress = Math.min(openSecs / ALERT_AFTER_SECS, 1);
+    mouthBar.style.width = (mouthProgress * 100) + '%';
 
     if (openSecs >= ALERT_AFTER_SECS) {
       if (!alertActive || (now - lastAlertTime) / 1000 >= ALERT_REPEAT_INTERVAL) {
         beep(); lastAlertTime = now; alertActive = true;
         if (window.zipIt) window.zipIt.alert(true);
       }
-      alertOverlay.style.display = 'block';
-      statusDot.style.background = '#e53935';
-      hStatus.textContent = 'ALERT';
+      mouthHalf.classList.add('hud-alert');
+      mouthBar.style.background = '#e53935';
     } else {
-      alertOverlay.style.display = 'none';
-      statusDot.style.background = isOpen ? '#ffb74d' : '#81c784';
-      hStatus.textContent = isOpen ? 'Open' : 'Closed';
+      mouthHalf.classList.remove('hud-alert');
+      mouthBar.style.background = isOpen ? '#ffb74d' : '#81c784';
     }
-    hRatio.textContent = ratio.toFixed(4);
-    hTime.textContent = openSecs.toFixed(1) + 's';
+
+    // Clear tray alert only when all three are clear
+    const anyAlert = alertActive || postureHalf.classList.contains('hud-alert') || handHalf.classList.contains('hud-alert');
+    if (!anyAlert && window.zipIt) window.zipIt.alert(false);
 
     updateZoom(lm);
     if (visible) {
       const lipColor = alertActive ? '#e53935' : isOpen ? '#ffb74d' : '#81c784';
       drawFrame(lm, lipColor);
     }
-
-    progressFill.style.width = (progress * 100) + '%';
-    progressFill.style.background = progress < 0.5 ? '#81c784' : progress < 0.85 ? '#ffb74d' : '#e53935';
   } else {
-    statusDot.style.background = '#888';
-    hStatus.textContent = '--';
-    hRatio.textContent = '--';
-    hTime.textContent = '0.0s';
-    progressFill.style.width = '0%';
+    mouthPct.textContent = '--%';
+    posturePct.textContent = '--%';
+    handPct.textContent = '--%';
+    mouthBar.style.width = '0%';
+    postureBar.style.width = '0%';
+    handBar.style.width = '0%';
+    mouthHalf.classList.remove('hud-alert');
+    postureHalf.classList.remove('hud-alert');
+    handHalf.classList.remove('hud-alert');
     mouthOpenSince = null;
+    postureBadSince = null;
+    handBadSince = null;
     resetZoom();
     if (visible) drawFrame(null, null);
   }
@@ -501,13 +794,8 @@ function detect() {
 // --- Recalibrate button ---
 recalBtn.addEventListener('click', () => startCalibration());
 
-// --- Init: load calibration or start wizard ---
-const hasCalibration = loadCalibration();
-if (!hasCalibration) {
-  // Show window automatically for calibration
-  if (window.zipIt) window.zipIt.showWindow();
-  startCalibration();
-}
+// --- Init: load calibration if available ---
+loadCalibration();
 
 // Allow forcing recalibration via IPC from main process or devtools
 window._recalibrate = () => {
