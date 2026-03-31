@@ -1,6 +1,6 @@
 # Third-party licenses
 
-## MediaPipe Tasks Vision & Face Landmarker Model
+## MediaPipe Tasks Vision, Face Landmarker, Pose Landmarker & Hand Landmarker Models
 
 Copyright 2023 The MediaPipe Authors
 
@@ -18,6 +18,8 @@ Applies to:
 - `vendor/vision_bundle.mjs`
 - `vendor/wasm/*`
 - `vendor/face_landmarker.task`
+- `vendor/hand_landmarker.task`
+- `vendor/pose_landmarker_lite.task`
 
 Source: https://github.com/google-ai-edge/mediapipe
 
